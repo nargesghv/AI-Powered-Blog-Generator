@@ -290,29 +290,37 @@ graph.add_edge("research", "summarize")
 graph.add_edge("summarize", "write")
 graph.add_edge("write", "cite")
 graph.add_edge("cite", "image")
-# ⬇️ Conditional edge for image regeneration
+graph.add_edge("image", "merge")
 def route_after_image(state: BlogState) -> str:
-    return "image" if state.get("regenerate_images") else "merge"
+    if state.get("regenerate_images"):
+        return "image"
+    elif state.get("edit_request"):
+        return "context_extract"
+    else:
+        return END
 
-graph.add_conditional_edges("image", route_after_image, {
-    "image": "image",
-    "merge": "merge"
-})
+graph.add_conditional_edges(
+    "merge",
+    route_after_image,
+    {
+        "image": "image",
+        "context_extract": "context_extract",
+        END: END
+    }
+)
 
-def route_after_merge(state: BlogState) -> str:
-    return "context_extract" if state.get("edit_request") else END
+graph.add_edge("context_extract", "edit")
+
 def route_after_edit(state: BlogState) -> str:
     return "context_extract" if state.get("edit_request") else END
 
-graph.add_conditional_edges("merge", route_after_merge, {
-    "context_extract": "context_extract",
-    END: END
-})
-
-graph.add_edge("context_extract", "edit")
-graph.add_conditional_edges("edit", route_after_edit, {
-    "context_extract": "context_extract",
-    END: END
-})
+graph.add_conditional_edges(
+    "edit",
+    route_after_edit,
+    {
+        "context_extract": "context_extract",
+        END: END
+    }
+)
 
 blog_chain = graph.compile()
