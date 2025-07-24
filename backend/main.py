@@ -21,7 +21,14 @@ from typing import Literal, Dict, Any, List
 
 
 app = FastAPI()
-
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://my-blog-ai-generator.netlify.app"],  # Netlify frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -30,7 +37,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# DB Dependency
+#DB Dependency
 def get_db():
     db = SessionLocal()
     try:
