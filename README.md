@@ -210,19 +210,18 @@ graph TD
     S --> W[Writer Agent]
     W --> C[Citation Agent]
     C --> I[Image Agent]
-    I -->|regenerate_request| CTX[Image Agent] --> E[Merge Output] --> I
+    I -->|regenerate_images| CTX[Image Agent] --> E[Merge Output] --> I
+    I --> |no regenerate| Done (M[Merge Output])
     I --> M[Merge Output]
     M -->|edit_request| CTX[Context Extractor] --> E[Editor Agent] --> M
     M -->|no edit| Done((Final Post))
 ```
-
 ---
 
 ## 📦 Requirements
 
 See `requirements.txt`
 
----
 ---
 
 ## 🧪 Testing
