@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
+// Use env var or fallback to localhost
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+
 function App() {
   const [topic, setTopic] = useState("");
   const [model, setModel] = useState("gpt");
@@ -12,7 +15,7 @@ function App() {
   const generateBlog = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/generate", {
+      const res = await fetch(`${API_BASE}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, model }),
@@ -37,7 +40,7 @@ function App() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/edit", {
+      const res = await fetch(`${API_BASE}/edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -61,7 +64,7 @@ function App() {
     if (!response?.state) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/regenerate-images", {
+      const res = await fetch(`${API_BASE}/regenerate-images`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -83,7 +86,6 @@ function App() {
       <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow">
         <h1 className="text-2xl font-bold mb-4">🧠 AI Blog Generator</h1>
 
-        {/* Topic input */}
         <input
           className="w-full p-2 border rounded mb-4"
           placeholder="Enter a topic for the blog..."
@@ -91,7 +93,6 @@ function App() {
           onChange={(e) => setTopic(e.target.value)}
         />
 
-        {/* Model Selector */}
         <div className="mb-4">
           <label className="font-medium mr-2">Model:</label>
           <select
@@ -115,7 +116,6 @@ function App() {
           <p className="mt-4 text-sm text-gray-500">⏳ Processing request...</p>
         )}
 
-        {/* Markdown preview */}
         {response?.final_post && (
           <div className="mt-6">
             <h2 className="text-lg font-semibold mb-2">
@@ -127,7 +127,6 @@ function App() {
           </div>
         )}
 
-        {/* Edit section */}
         {response?.state && (
           <div className="mt-6">
             <textarea
@@ -145,7 +144,6 @@ function App() {
           </div>
         )}
 
-        {/* Image previews and regenerate button */}
         {response?.state?.images?.length > 0 && (
           <div className="mt-8">
             <div className="flex items-center justify-between mb-2">
