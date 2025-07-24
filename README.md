@@ -204,17 +204,30 @@ python backend/test_fetch_blogs.py
 ## 🧠 Intelligent Agent Flow
 
 ```mermaid
-graph TD
-    topic[User Topic] --> R[Research Agent]
-    R --> S[Summarizer Agent]
-    S --> W[Writer Agent]
-    W --> C[Citation Agent]
-    C --> I[Image Agent]
-    I -->|regenerate_images| CTX[Image Agent] --> E[Merge Output] --> I
-    I --> |no regenerate| Done (M[Merge Output])
-    I --> M[Merge Output]
-    M -->|edit_request| CTX[Context Extractor] --> E[Editor Agent] --> M
-    M -->|no edit| Done((Final Post))
+flowchart TD
+    research[Research Agent]
+    summarize[Summarizer Agent]
+    write[Writer Agent]
+    cite[Citation Agent]
+    image[Image Agent]
+    merge[Merge Outputs]
+    context_extract[Context Extractor Agent]
+    edit[Editor Agent]
+    END((END))
+
+    research --> summarize
+    summarize --> write
+    write --> cite
+    cite --> image
+    image --> merge
+
+    merge -->|regenerate_images| image
+    merge -->|edit_request| context_extract
+    merge -->|else| END
+
+    context_extract --> edit
+    edit -->|edit_request| context_extract
+    edit -->|else| END
 ```
 ---
 
