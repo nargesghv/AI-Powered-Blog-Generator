@@ -6,79 +6,82 @@ const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
 
 function App() {
   const [topic, setTopic] = useState("");
-  const [model, setModel] = useState("gpt");
+  // ✅ Only two options: ollama or croq
+  const [model, setModel] = useState("ollama");
   const [response, setResponse] = useState(null);
   const [editRequest, setEditRequest] = useState("");
   const [loading, setLoading] = useState(false);
   const [wasEdited, setWasEdited] = useState(false);
+  const [error, setError] = useState("");
 
-  const generateBlog = async () => {
+  const handleFetch = async (url, body) => {
     setLoading(true);
+    setError("");
     try {
-      const res = await fetch(`${API_BASE}/generate`, {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, model }),
+        body: JSON.stringify(body),
       });
+
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.detail || "Request failed");
+      }
+
       setResponse(data);
-      setWasEdited(false);
+      return data;
     } catch (err) {
-      console.error("Error generating blog:", err);
+      console.error(err);
+      setError(err.message || "Something went wrong");
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
+  const generateBlog = async () => {
+    if (!topic.trim()) {
+      setError("Please enter a topic.");
+      return;
+    }
+
+    const payload = { topic, model }; // model: "ollama" | "croq"
+    const data = await handleFetch(`${API_BASE}/generate`, payload);
+    if (data) setWasEdited(false);
+  };
+
   const sendEdit = async () => {
-    if (!editRequest.trim()) return;
+    if (!editRequest.trim() || !response?.state) return;
 
     const safeState = {
       ...response.state,
-      topic: response.state?.topic || topic,
+      topic: response.state?.topic || topic, // ensure topic exists
     };
 
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/edit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          state: safeState,
-          edit_request: editRequest,
-          model,
-        }),
-      });
-      const data = await res.json();
-      setResponse(data);
+    const payload = {
+      state: safeState,
+      edit_request: editRequest,
+      model, // "ollama" | "croq"
+    };
+
+    const data = await handleFetch(`${API_BASE}/edit`, payload);
+    if (data) {
       setEditRequest("");
       setWasEdited(true);
-    } catch (err) {
-      console.error("Error sending edit:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const regenerateImages = async () => {
     if (!response?.state) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/regenerate-images`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          state: response.state,
-          final_post: response.final_post,
-        }),
-      });
-      const data = await res.json();
-      setResponse(data);
-    } catch (err) {
-      console.error("Error regenerating images:", err);
-    } finally {
-      setLoading(false);
-    }
+
+    const payload = {
+      state: response.state,
+      model, // ✅ include model so backend picks correct runner
+    };
+
+    await handleFetch(`${API_BASE}/regenerate-images`, payload);
   };
 
   return (
@@ -91,6 +94,7 @@ function App() {
           placeholder="Enter a topic for the blog..."
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
+          disabled={loading}
         />
 
         <div className="mb-4">
@@ -99,21 +103,27 @@ function App() {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             className="p-2 border rounded"
+            disabled={loading}
           >
-            <option value="gpt">OpenAI GPT</option>
-            <option value="llama">LLaMA (Groq)</option>
+            <option value="ollama">Ollama (local)</option>
+            <option value="croq">Groq (LLaMA)</option>
           </select>
         </div>
 
         <button
           onClick={generateBlog}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60"
+          disabled={loading}
         >
           Generate
         </button>
 
         {loading && (
           <p className="mt-4 text-sm text-gray-500">⏳ Processing request...</p>
+        )}
+
+        {error && (
+          <p className="mt-4 text-sm text-red-600">⚠️ {error}</p>
         )}
 
         {response?.final_post && (
@@ -134,10 +144,12 @@ function App() {
               placeholder="Request edits (e.g., make it funnier, shorten the intro)"
               value={editRequest}
               onChange={(e) => setEditRequest(e.target.value)}
+              disabled={loading}
             />
             <button
               onClick={sendEdit}
-              className="bg-green-600 text-white px-4 py-2 rounded mt-2 hover:bg-green-700"
+              className="bg-green-600 text-white px-4 py-2 rounded mt-2 hover:bg-green-700 disabled:opacity-60"
+              disabled={loading || !editRequest.trim()}
             >
               Send Edit Request
             </button>
@@ -150,7 +162,8 @@ function App() {
               <h3 className="font-semibold">🖼 Suggested Images</h3>
               <button
                 onClick={regenerateImages}
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-blue-600 hover:underline disabled:opacity-60"
+                disabled={loading}
               >
                 🔁 Regenerate Images
               </button>
@@ -158,7 +171,7 @@ function App() {
             <div className="grid grid-cols-2 gap-4">
               {response.state.images.map((img, idx) => (
                 <div key={idx} className="border rounded overflow-hidden">
-                  <img src={img.url} alt={img.alt} className="w-full h-auto" />
+                  <img src={img.url} alt={img.alt || `Image ${idx + 1}`} className="w-full h-auto" />
                   <div className="p-2 text-sm text-gray-600">
                     <p>
                       <strong>Alt:</strong> {img.alt}
@@ -170,6 +183,21 @@ function App() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {response?.state?.citations?.length > 0 && (
+          <div className="mt-8">
+            <h3 className="font-semibold mb-2">🔗 References</h3>
+            <ul className="list-disc list-inside text-sm text-gray-700">
+              {response.state.citations.map((c, idx) => (
+                <li key={idx}>
+                  <a href={c.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                    {c.title || c.url}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
