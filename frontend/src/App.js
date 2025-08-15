@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 
 // Use env var or fallback to localhost
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+const API_BASE = process.env.REACT_APP_API_BASE || "/api";
 
 function App() {
   const [topic, setTopic] = useState("");
