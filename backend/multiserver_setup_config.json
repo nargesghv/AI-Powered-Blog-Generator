@@ -1,0 +1,16 @@
+{
+  "servers": {
+    "linkup": {
+      "type": "http",
+      "url": "http://localhost:9000" 
+    },
+    "filesystem": {
+      "type": "local",
+      "base_path": "./filestore"
+    }
+  },
+  "defaults": {
+    "timeout": 30,
+    "retries": 2
+  }
+}

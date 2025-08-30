@@ -51,3 +51,23 @@ class BlogResponse(BaseModel):
 class RegenerateImageRequest(BaseModel):
     state: Dict[str, Any]
     final_post: str
+
+# db/schemas.py (snippets)
+from typing import Literal
+from pydantic import BaseModel
+
+class ExtendedTopicRequest(BaseModel):
+    topic: str
+    model: Literal["ollama", "croq"] = "ollama"
+
+class EditRequest(BaseModel):
+    state: dict
+    edit_request: str
+
+class ExtendedEditRequest(EditRequest):
+    model: Literal["ollama", "croq"] = "ollama"
+
+class RegenerateImageRequest(BaseModel):
+    state: dict
+    model: Literal["ollama", "croq"] = "ollama"
+
