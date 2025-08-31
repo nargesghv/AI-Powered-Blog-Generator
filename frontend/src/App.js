@@ -2,12 +2,11 @@ import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 // Use env var or fallback to localhost
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8001";
 
 function App() {
   const [topic, setTopic] = useState("");
-  // ✅ Only two options: ollama or croq
-  const [model, setModel] = useState("ollama");
+  const [model, setModel] = useState("ollama"); // ✅ only "ollama" or "croq"
   const [response, setResponse] = useState(null);
   const [editRequest, setEditRequest] = useState("");
   const [loading, setLoading] = useState(false);
@@ -47,7 +46,7 @@ function App() {
       return;
     }
 
-    const payload = { topic, model }; // model: "ollama" | "croq"
+    const payload = { topic, model };
     const data = await handleFetch(`${API_BASE}/generate`, payload);
     if (data) setWasEdited(false);
   };
@@ -63,7 +62,7 @@ function App() {
     const payload = {
       state: safeState,
       edit_request: editRequest,
-      model, // "ollama" | "croq"
+      model,
     };
 
     const data = await handleFetch(`${API_BASE}/edit`, payload);
@@ -78,7 +77,7 @@ function App() {
 
     const payload = {
       state: response.state,
-      model, // ✅ include model so backend picks correct runner
+      model,
     };
 
     await handleFetch(`${API_BASE}/regenerate-images`, payload);
@@ -122,9 +121,7 @@ function App() {
           <p className="mt-4 text-sm text-gray-500">⏳ Processing request...</p>
         )}
 
-        {error && (
-          <p className="mt-4 text-sm text-red-600">⚠️ {error}</p>
-        )}
+        {error && <p className="mt-4 text-sm text-red-600">⚠️ {error}</p>}
 
         {response?.final_post && (
           <div className="mt-6">
@@ -171,7 +168,11 @@ function App() {
             <div className="grid grid-cols-2 gap-4">
               {response.state.images.map((img, idx) => (
                 <div key={idx} className="border rounded overflow-hidden">
-                  <img src={img.url} alt={img.alt || `Image ${idx + 1}`} className="w-full h-auto" />
+                  <img
+                    src={img.url}
+                    alt={img.alt || `Image ${idx + 1}`}
+                    className="w-full h-auto"
+                  />
                   <div className="p-2 text-sm text-gray-600">
                     <p>
                       <strong>Alt:</strong> {img.alt}
@@ -192,7 +193,12 @@ function App() {
             <ul className="list-disc list-inside text-sm text-gray-700">
               {response.state.citations.map((c, idx) => (
                 <li key={idx}>
-                  <a href={c.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                  <a
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
                     {c.title || c.url}
                   </a>
                 </li>
