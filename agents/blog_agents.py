@@ -56,7 +56,7 @@ from dotenv import load_dotenv
 
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
-GROQ_API_KEY = os.getenv("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")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b-instruct-q4_0")
 
