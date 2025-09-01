@@ -1,21 +1,24 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { motion } from "framer-motion";
 
-// Use env var or fallback to localhost
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8001";
+
+// Stages shown in progress bar
+const STAGES = ["Research", "Summarize", "Write", "Images", "Final"];
 
 function App() {
   const [topic, setTopic] = useState("");
-  const [model, setModel] = useState("ollama"); // "ollama" | "croq"
+  const [model, setModel] = useState("ollama");
   const [response, setResponse] = useState(null);
-  const [editRequest, setEditRequest] = useState("");
   const [loading, setLoading] = useState(false);
-  const [wasEdited, setWasEdited] = useState(false);
   const [error, setError] = useState("");
+  const [currentStage, setCurrentStage] = useState("");
 
   const handleFetch = async (url, body) => {
     setLoading(true);
     setError("");
+    setCurrentStage("Starting...");
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -24,16 +27,11 @@ function App() {
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        // ✅ Show proper backend error message
-        throw new Error(data?.detail || JSON.stringify(data));
-      }
-
+      if (!res.ok) throw new Error(data?.detail || "Request failed");
       setResponse(data);
+      setCurrentStage("Final");
       return data;
     } catch (err) {
-      console.error("❌ Fetch error:", err);
       setError(err.message || "Something went wrong");
       return null;
     } finally {
@@ -46,62 +44,31 @@ function App() {
       setError("Please enter a topic.");
       return;
     }
-
-    // ✅ Backend expects these fields
-    const payload = {
-      topic,
-      model,
-      target_audience: "tech-savvy professionals",
-      content_type: "informative article",
-      word_count_target: 800,
-      enable_advanced_search: true,
-      enable_content_analysis: true,
-    };
-
-    const data = await handleFetch(`${API_BASE}/generate`, payload);
-    if (data) setWasEdited(false);
-  };
-
-  const sendEdit = async () => {
-    if (!editRequest.trim() || !response?.state) return;
-
-    const safeState = {
-      ...response.state,
-      topic: response.state?.topic || topic, // ensure topic exists
-    };
-
-    const payload = {
-      state: safeState,
-      edit_request: editRequest,
-      model,
-    };
-
-    const data = await handleFetch(`${API_BASE}/edit`, payload);
-    if (data) {
-      setEditRequest("");
-      setWasEdited(true);
-    }
+    setCurrentStage("Research");
+    const payload = { topic, model };
+    await handleFetch(`${API_BASE}/generate`, payload);
   };
 
   const regenerateImages = async () => {
     if (!response?.state) return;
-
-    const payload = {
-      state: response.state,
-      model,
-    };
-
+    setCurrentStage("Images");
+    const payload = { state: response.state, model };
     await handleFetch(`${API_BASE}/regenerate-images`, payload);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow">
-        <h1 className="text-2xl font-bold mb-4">🧠 AI Blog Generator</h1>
+  const stageIndex = STAGES.indexOf(currentStage);
 
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-purple-200 p-6">
+      <div className="max-w-3xl mx-auto bg-white p-6 rounded-2xl shadow-xl">
+        <h1 className="text-3xl font-bold mb-6 text-center">
+          🧠 AI Blog Generator
+        </h1>
+
+        {/* Input Section */}
         <input
-          className="w-full p-2 border rounded mb-4"
-          placeholder="Enter a topic for the blog..."
+          className="w-full p-3 border rounded-lg mb-4"
+          placeholder="Enter a topic..."
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           disabled={loading}
@@ -116,56 +83,60 @@ function App() {
             disabled={loading}
           >
             <option value="ollama">Ollama (local)</option>
-            <option value="croq">Groq (LLaMA)</option>
+            <option value="groq">Groq (cloud)</option>
           </select>
         </div>
 
         <button
           onClick={generateBlog}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60"
           disabled={loading}
         >
           Generate
         </button>
 
+        {/* Progress Bar */}
         {loading && (
-          <p className="mt-4 text-sm text-gray-500">⏳ Processing request...</p>
+          <div className="mt-6">
+            <div className="flex justify-between mb-2 text-sm font-medium">
+              {STAGES.map((s, idx) => (
+                <span
+                  key={s}
+                  className={idx <= stageIndex ? "text-blue-600" : "text-gray-400"}
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+            <div className="w-full bg-gray-200 h-2 rounded-full">
+              <motion.div
+                className="bg-blue-500 h-2 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${((stageIndex + 1) / STAGES.length) * 100}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              ⏳ {currentStage}...
+            </p>
+          </div>
         )}
 
         {error && (
           <p className="mt-4 text-sm text-red-600">⚠️ {error}</p>
         )}
 
+        {/* Blog Output */}
         {response?.final_post && (
           <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-2">
-              {wasEdited ? "✍️ Edited Blog" : "📝 Generated Blog"}
-            </h2>
-            <div className="prose prose-lg max-w-none bg-gray-50 p-4 rounded">
+            <h2 className="text-lg font-semibold mb-2">📝 Generated Blog</h2>
+            <div className="prose prose-lg max-w-none bg-gray-50 p-4 rounded-lg">
               <ReactMarkdown>{response.final_post}</ReactMarkdown>
             </div>
           </div>
         )}
 
-        {response?.state && (
-          <div className="mt-6">
-            <textarea
-              className="w-full p-2 border rounded h-20"
-              placeholder="Request edits (e.g., make it funnier, shorten the intro)"
-              value={editRequest}
-              onChange={(e) => setEditRequest(e.target.value)}
-              disabled={loading}
-            />
-            <button
-              onClick={sendEdit}
-              className="bg-green-600 text-white px-4 py-2 rounded mt-2 hover:bg-green-700 disabled:opacity-60"
-              disabled={loading || !editRequest.trim()}
-            >
-              Send Edit Request
-            </button>
-          </div>
-        )}
-
+        {/* Images */}
         {response?.state?.images?.length > 0 && (
           <div className="mt-8">
             <div className="flex items-center justify-between mb-2">
@@ -180,15 +151,15 @@ function App() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               {response.state.images.map((img, idx) => (
-                <div key={idx} className="border rounded overflow-hidden">
-                  <img src={img.url} alt={img.alt || `Image ${idx + 1}`} className="w-full h-auto" />
+                <div key={idx} className="border rounded-lg overflow-hidden">
+                  <img
+                    src={img.url}
+                    alt={img.alt || `Image ${idx + 1}`}
+                    className="w-full h-auto"
+                  />
                   <div className="p-2 text-sm text-gray-600">
-                    <p>
-                      <strong>Alt:</strong> {img.alt}
-                    </p>
-                    <p>
-                      <strong>License:</strong> {img.license}
-                    </p>
+                    <p><strong>Alt:</strong> {img.alt}</p>
+                    <p><strong>License:</strong> {img.license}</p>
                   </div>
                 </div>
               ))}
@@ -196,13 +167,19 @@ function App() {
           </div>
         )}
 
+        {/* Citations */}
         {response?.state?.citations?.length > 0 && (
           <div className="mt-8">
             <h3 className="font-semibold mb-2">🔗 References</h3>
             <ul className="list-disc list-inside text-sm text-gray-700">
               {response.state.citations.map((c, idx) => (
                 <li key={idx}>
-                  <a href={c.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                  <a
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
                     {c.title || c.url}
                   </a>
                 </li>
