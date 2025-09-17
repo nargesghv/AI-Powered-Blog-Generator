@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { motion } from "framer-motion";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8001";
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8002";
 
 // Stages shown in progress bar
 const STAGES = ["Research", "Summarize", "Write", "Images", "Final"];
